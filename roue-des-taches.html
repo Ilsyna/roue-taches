@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roue des tâches — CPJA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F4F6FB;
+    --surface: #FFFFFF;
+    --surface2: #F0F2F8;
+    --border: rgba(0,0,0,.09);
+    --text: #1A1D2E;
+    --text2: #6B7080;
+    --text3: #A0A5B8;
+    --accent: #4A7FE5;
+    --accent-bg: #EEF3FD;
+    --success: #3DBB7C;
+    --success-bg: #EDFAF3;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: white; font-weight: 800;
+  }
+
+  header h1 { font-size: 18px; font-weight: 800; color: var(--text); }
+  header span { font-size: 13px; color: var(--text2); margin-left: 4px; }
+
+  .week-pill {
+    margin-left: auto;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-size: 12px; font-weight: 700;
+    padding: 5px 14px; border-radius: 20px;
+    border: 1px solid rgba(74,127,229,.2);
+  }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    padding: 24px 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 24px;
+  }
+
+  /* ── WHEEL PANEL ── */
+  #wheel-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  #task-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #task-row label {
+    font-size: 12px; font-weight: 700;
+    color: var(--text2); white-space: nowrap;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+
+  #task-select {
+    flex: 1;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px; font-weight: 600;
+    padding: 9px 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    transition: border-color .2s;
+  }
+  #task-select:focus { border-color: var(--accent); }
+
+  #eligible-badge {
+    font-size: 11px; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px;
+    background: var(--accent-bg); color: var(--accent);
+    border: 1px solid rgba(74,127,229,.25);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  #wheel-wrap {
+    position: relative;
+    width: 440px; height: 440px;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  #wheel-canvas {
+    display: block;
+    border-radius: 50%;
+    box-shadow: 0 8px 40px rgba(0,0,0,.13), 0 2px 8px rgba(0,0,0,.08);
+    transition: transform .08s;
+  }
+  #wheel-wrap:hover #wheel-canvas { transform: scale(1.012); }
+  #wheel-wrap:active #wheel-canvas { transform: scale(0.985); }
+
+  #needle-wrap {
+    position: absolute;
+    right: -6px; top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .needle-svg { filter: drop-shadow(0 2px 5px rgba(0,0,0,.3)); }
+
+  .hint {
+    font-size: 12px; color: var(--text3); font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  #result-area {
+    text-align: center;
+    min-height: 70px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+  }
+
+  #result-name {
+    font-size: 28px; font-weight: 800;
+    color: var(--text);
+    transition: all .3s;
+  }
+
+  #result-task {
+    font-size: 13px; font-weight: 600;
+    color: var(--text2);
+  }
+
+  #confirm-btn {
+    display: none;
+    width: 100%; max-width: 360px;
+    padding: 13px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    transition: opacity .15s, transform .1s;
+    letter-spacing: .01em;
+  }
+  #confirm-btn:hover { opacity: .9; }
+  #confirm-btn:active { transform: scale(0.98); }
+
+  #status-msg {
+    font-size: 12px; font-weight: 600;
+    color: var(--text2); min-height: 18px; text-align: center;
+  }
+
+  /* ── RIGHT COLUMN ── */
+  #right-col { display: flex; flex-direction: column; gap: 16px; }
+
+  .section-title {
+    font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .07em;
+    color: var(--text2); margin-bottom: 12px;
+  }
+
+  /* week list */
+  .assign-list { display: flex; flex-direction: column; gap: 7px; }
+
+  .assign-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    animation: fadeIn .35s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .assign-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .assign-info { flex: 1; min-width: 0; }
+  .assign-student { font-size: 14px; font-weight: 700; color: var(--text); }
+  .assign-task { font-size: 11px; font-weight: 600; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .empty-msg { font-size: 13px; color: var(--text3); font-weight: 600; text-align: center; padding: 20px 0; }
+
+  /* progress */
+  .progress-list { display: flex; flex-direction: column; gap: 7px; }
+
+  .prog-row { display: flex; align-items: center; gap: 10px; }
+  .prog-name { font-size: 12px; font-weight: 700; color: var(--text); width: 72px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prog-bar-bg { flex: 1; height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+  .prog-bar { height: 7px; border-radius: 4px; transition: width .6s ease; }
+  .prog-pct { font-size: 10px; font-weight: 700; color: var(--text2); width: 30px; text-align: right; }
+
+  .spinner {
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid #ddd; border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+    vertical-align: middle; margin-right: 5px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESET AREA ── */
+  #reset-area {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  #reset-btn {
+    width: 100%; padding: 8px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: color .15s, border-color .15s;
+  }
+  #reset-btn:hover { color: #E24B4A; border-color: #E24B4A; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎡</div>
+  <h1>Roue des tâches</h1>
+  <span>CPJA — Maturité 4</span>
+  <div class="week-pill" id="week-pill">Semaine …</div>
+</header>
+
+<main>
+  <!-- LEFT: roue -->
+  <div class="card" id="wheel-panel">
+    <div id="task-row">
+      <label for="task-select">Tâche</label>
+      <select id="task-select"></select>
+      <span id="eligible-badge">…</span>
+    </div>
+
+    <div id="wheel-wrap" title="Cliquer pour faire tourner la roue">
+      <canvas id="wheel-canvas" width="440" height="440"></canvas>
+      <div id="needle-wrap">
+        <svg class="needle-svg" width="44" height="28" viewBox="0 0 44 28">
+          <polygon points="44,14 0,0 8,14 0,28" fill="#E24B4A"/>
+          <circle cx="8" cy="14" r="5" fill="#fff" stroke="#E24B4A" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="hint">👆 Clique sur la roue pour faire tourner</div>
+
+    <div id="result-area">
+      <span id="result-name" style="color:var(--text3); font-size:16px; font-weight:700;">Sélectionne une tâche</span>
+      <span id="result-task"></span>
+    </div>
+
+    <button id="confirm-btn">✓ Confirmer l'attribution</button>
+    <div id="status-msg"></div>
+  </div>
+
+  <!-- RIGHT: suivi -->
+  <div id="right-col">
+    <div class="card" style="flex:1;">
+      <div class="section-title" id="week-title">Cette semaine</div>
+      <div class="assign-list" id="assign-list">
+        <div class="empty-msg">Aucune attribution encore</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Progression des élèves</div>
+      <div class="progress-list" id="progress-list"></div>
+      <div id="reset-area">
+        <button id="reset-btn">↺ Réinitialiser toutes les tâches</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const TASKS = [
+  'Messager','Distributeur','Chef de rang (1)','Chef de rang (2)',
+  'Ramasseur','Responsable de la date',
+  'Responsable des boites à tartine (1)','Responsable des boites à tartines 2',
+  'Responsable des casiers','Responsable des livres','Remplaçant'
+];
+
+const COLORS = [
+  '#4A7FE5','#E07B54','#3DBB7C','#C97EC4','#E8C44A',
+  '#5AB8D4','#D4856A','#66BB66','#9A7FD4','#E89B4A',
+  '#45C4B0','#D4709A','#8BBB55'
+];
+
+const DEFAULT_STUDENTS = [
+  {name:'Hasan',      done:['Messager']},
+  {name:'Ahmed K.',   done:['Responsable des boites à tartine (1)']},
+  {name:'Hussein',    done:['Remplaçant']},
+  {name:'Ayman',      done:['Chef de rang (2)']},
+  {name:'Jordan',     done:['Chef de rang (1)']},
+  {name:'Daniel',     done:['Responsable des casiers']},
+  {name:'Ouwais',     done:[]},
+  {name:'Meryem',     done:['Distributeur']},
+  {name:'Ahmed A.',   done:['Ramasseur']},
+  {name:'Louay',      done:['Responsable des boites à tartines 2']},
+  {name:'Oumar',      done:['Responsable des boites à tartine (1)']},
+  {name:'Mamadou',    done:['Responsable des livres']},
+  {name:'Rayan',      done:['Ramasseur']}
+];
+
+// ── STATE (persisté en localStorage) ─────────────────────────────────────────
+const STORE_KEY = 'cpja_roue_v1';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { students: JSON.parse(JSON.stringify(DEFAULT_STUDENTS)), weekAssignments: [] };
+}
+
+function saveState() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ students, weekAssignments })); } catch(e) {}
+}
+
+let { students, weekAssignments } = loadState();
+let spinning = false;
+let lastWinner = null;
+let currentAngle = 0;
+let eligible = [];
+let selectedTask = TASKS[0];
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function getWeekKey() {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const y = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(y, 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { key: `S${week}-${y}`, label: `Semaine ${week} — ${y}` };
+}
+
+function getEligible(task) {
+  const wk = getWeekKey().key;
+  const doneThisWeek = weekAssignments
+    .filter(a => a.task === task && a.week === wk)
+    .map(a => a.student);
+  const notDone = students.filter(s => !s.done.includes(task) && !doneThisWeek.includes(s.name));
+  if (notDone.length > 0) return notDone;
+  return students.filter(s => !doneThisWeek.includes(s.name));
+}
+
+// ── WHEEL DRAWING ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('wheel-canvas');
+const ctx = canvas.getContext('2d');
+
+function drawWheel(elList, angle) {
+  const W = 440, cx = W/2, cy = W/2, R = 214, Rin = 24;
+  ctx.clearRect(0, 0, W, W);
+
+  if (!elList.length) {
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.fillStyle = '#eee'; ctx.fill();
+    ctx.fillStyle = '#aaa'; ctx.font = '700 15px Nunito, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Aucun élève éligible', cx, cy + 5);
+    return;
+  }
+
+  const n = elList.length;
+  const arc = (2 * Math.PI) / n;
+
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
+
+  elList.forEach((s, i) => {
+    const start = i * arc, end = start + arc;
+    // slice
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0, 0, R, start, end); ctx.closePath();
+    ctx.fillStyle = COLORS[i % COLORS.length]; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 2.5; ctx.stroke();
+    // label
+    ctx.save(); ctx.rotate(start + arc/2);
+    const fs = Math.max(11, Math.min(18, 210/n));
+    ctx.font = `700 ${fs}px Nunito, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,.97)';
+    ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 3;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(s.name, R * 0.62, 0);
+    ctx.restore();
+  });
+
+  ctx.restore();
+
+  // centre hub
+  const hub = ctx.createRadialGradient(cx-6, cy-6, 3, cx, cy, Rin+6);
+  hub.addColorStop(0, '#ffffff'); hub.addColorStop(1, '#d0d4e0');
+  ctx.beginPath(); ctx.arc(cx, cy, Rin, 0, Math.PI*2);
+  ctx.fillStyle = hub; ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.1)'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+function getWinner(elList, finalAngle) {
+  if (!elList.length) return null;
+  const n = elList.length;
+  const arc = (2*Math.PI)/n;
+  const norm = ((-finalAngle) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
+  return elList[Math.floor(norm / arc) % n];
+}
+
+// ── SPIN ──────────────────────────────────────────────────────────────────────
+function spin() {
+  if (!eligible.length || spinning) return;
+  spinning = true;
+  lastWinner = null;
+  document.getElementById('confirm-btn').style.display = 'none';
+  document.getElementById('result-name').textContent = '…';
+  document.getElementById('result-task').textContent = '';
+
+  const n = eligible.length;
+  const arc = (2*Math.PI)/n;
+  const targetIdx = Math.floor(Math.random() * n);
+  const extraTurns = 6 + Math.floor(Math.random() * 5);
+  const targetAngle = currentAngle + 2*Math.PI*extraTurns
+    + ((2*Math.PI - (currentAngle % (2*Math.PI))) + 2*Math.PI - targetIdx*arc - arc/2);
+  const duration = 4000 + Math.random() * 600;
+  const startAngle = currentAngle;
+  const t0 = performance.now();
+
+  function ease(t) { return 1 - Math.pow(1-t, 4.5); }
+
+  function frame(now) {
+    const t = Math.min((now - t0) / duration, 1);
+    currentAngle = startAngle + (targetAngle - startAngle) * ease(t);
+    drawWheel(eligible, currentAngle);
+    if (t < 1) { requestAnimationFrame(frame); return; }
+    spinning = false;
+    const winner = getWinner(eligible, currentAngle);
+    lastWinner = winner;
+    const rn = document.getElementById('result-name');
+    rn.textContent = winner ? winner.name : '?';
+    rn.style.color = 'var(--text)';
+    rn.style.fontSize = '28px';
+    document.getElementById('result-task').textContent = `→ ${selectedTask}`;
+    document.getElementById('confirm-btn').style.display = 'block';
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── TASK CHANGE ───────────────────────────────────────────────────────────────
+function onTaskChange() {
+  selectedTask = document.getElementById('task-select').value;
+  eligible = getEligible(selectedTask);
+  const n = eligible.length;
+  document.getElementById('eligible-badge').textContent = `${n} éligible${n > 1 ? 's' : ''}`;
+  drawWheel(eligible, currentAngle);
+  const rn = document.getElementById('result-name');
+  rn.textContent = n ? 'Prêt !' : 'Aucun élève dispo';
+  rn.style.color = 'var(--text3)';
+  rn.style.fontSize = '16px';
+  document.getElementById('result-task').textContent = '';
+  document.getElementById('confirm-btn').style.display = 'none';
+  lastWinner = null;
+}
+
+// ── CONFIRM ───────────────────────────────────────────────────────────────────
+function confirm() {
+  if (!lastWinner || !selectedTask) return;
+  const wk = getWeekKey().key;
+  const colorIdx = eligible.indexOf(lastWinner);
+  weekAssignments.push({
+    task: selectedTask,
+    student: lastWinner.name,
+    week: wk,
+    color: COLORS[colorIdx % COLORS.length]
+  });
+  if (!lastWinner.done.includes(selectedTask)) lastWinner.done.push(selectedTask);
+  saveState();
+  document.getElementById('confirm-btn').style.display = 'none';
+  document.getElementById('status-msg').textContent = '✓ Attribution enregistrée !';
+  setTimeout(() => { document.getElementById('status-msg').textContent = ''; }, 2500);
+  onTaskChange();
+  renderWeek();
+  renderProgress();
+}
+
+// ── RENDER: WEEK ──────────────────────────────────────────────────────────────
+function renderWeek() {
+  const { key, label } = getWeekKey();
+  document.getElementById('week-pill').textContent = label;
+  document.getElementById('week-title').textContent = 'Attributions — ' + label;
+  const thisWeek = weekAssignments.filter(a => a.week === key);
+  const list = document.getElementById('assign-list');
+  if (!thisWeek.length) {
+    list.innerHTML = '<div class="empty-msg">Aucune attribution encore</div>';
+    return;
+  }
+  list.innerHTML = thisWeek.slice().reverse().map(a =>
+    `<div class="assign-row">
+      <div class="assign-dot" style="background:${a.color || '#4A7FE5'}"></div>
+      <div class="assign-info">
+        <div class="assign-student">${a.student}</div>
+        <div class="assign-task">${a.task}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+// ── RENDER: PROGRESS ──────────────────────────────────────────────────────────
+function renderProgress() {
+  const total = TASKS.length;
+  document.getElementById('progress-list').innerHTML = students.map(s => {
+    const pct = Math.round((s.done.length / total) * 100);
+    const color = pct >= 80 ? '#3DBB7C' : pct >= 40 ? '#4A7FE5' : '#E8C44A';
+    return `<div class="prog-row">
+      <div class="prog-name" title="${s.name}">${s.name}</div>
+      <div class="prog-bar-bg"><div class="prog-bar" style="width:${pct}%; background:${color};"></div></div>
+      <div class="prog-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (!confirm('Réinitialiser toutes les tâches et attributions ?')) return;
+  students = JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
+  weekAssignments = [];
+  saveState();
+  onTaskChange();
+  renderWeek();
+  renderProgress();
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+TASKS.forEach(t => {
+  const opt = document.createElement('option');
+  opt.value = t; opt.textContent = t;
+  document.getElementById('task-select').appendChild(opt);
+});
+
+document.getElementById('task-select').addEventListener('change', onTaskChange);
+document.getElementById('wheel-wrap').addEventListener('click', spin);
+document.getElementById('confirm-btn').addEventListener('click', confirm);
+
+onTaskChange();
+renderWeek();
+renderProgress();
+</script>
+</body>
+</html>
