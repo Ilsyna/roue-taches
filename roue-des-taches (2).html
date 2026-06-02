@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roue des tâches — CPJA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#F4F6FB; --surface:#FFFFFF; --surface2:#F0F2F8;
+  --border:rgba(0,0,0,.09); --text:#1A1D2E; --text2:#6B7080; --text3:#A0A5B8;
+  --accent:#4A7FE5; --accent-bg:#EEF3FD;
+  --success:#3DBB7C; --success-bg:#EDFAF3;
+  --danger:#E24B4A; --danger-bg:#FEF0F0;
+  --radius:16px; --radius-sm:10px;
+}
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
+
+header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:10; }
+.logo { width:36px; height:36px; border-radius:10px; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:18px; color:white; font-weight:800; }
+header h1 { font-size:18px; font-weight:800; }
+.week-pill { background:var(--accent-bg); color:var(--accent); font-size:12px; font-weight:700; padding:5px 14px; border-radius:20px; border:1px solid rgba(74,127,229,.2); }
+.header-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+#auth-btn { display:flex; align-items:center; gap:8px; padding:7px 14px; border-radius:var(--radius-sm); font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all .15s; border:1px solid var(--border); background:var(--surface2); color:var(--text2); }
+#auth-btn:hover { background:var(--accent-bg); color:var(--accent); border-color:var(--accent); }
+#auth-btn.connected { background:var(--success-bg); color:var(--success); border-color:var(--success); }
+#settings-btn { background:var(--surface2); color:var(--text2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 14px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all .15s; }
+#settings-btn:hover { background:var(--accent-bg); color:var(--accent); border-color:var(--accent); }
+
+/* TABS MAIN */
+.main-tabs { display:flex; gap:4px; padding:16px 32px 0; max-width:1200px; margin:0 auto; width:100%; }
+.main-tab { padding:9px 20px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; border:none; background:none; cursor:pointer; color:var(--text2); border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-bottom:2px solid transparent; transition:all .15s; }
+.main-tab.active { color:var(--accent); border-bottom-color:var(--accent); background:var(--surface); }
+.main-tab:hover:not(.active) { background:rgba(255,255,255,.6); }
+
+main { flex:1; max-width:1200px; margin:0 auto; width:100%; padding:0 32px 32px; }
+.main-panel { display:none; padding-top:20px; }
+.main-panel.active { display:block; }
+
+.card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:24px; }
+
+/* ROUE */
+#roue-layout { display:grid; grid-template-columns:1fr 340px; gap:20px; }
+#wheel-panel { display:flex; flex-direction:column; align-items:center; gap:20px; }
+#task-row { width:100%; display:flex; align-items:center; gap:10px; }
+#task-row label { font-size:12px; font-weight:700; color:var(--text2); white-space:nowrap; text-transform:uppercase; letter-spacing:.05em; }
+#task-select { flex:1; font-family:'Nunito',sans-serif; font-size:14px; font-weight:600; padding:9px 14px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; outline:none; transition:border-color .2s; }
+#task-select:focus { border-color:var(--accent); }
+#eligible-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; background:var(--accent-bg); color:var(--accent); border:1px solid rgba(74,127,229,.25); white-space:nowrap; flex-shrink:0; }
+#wheel-wrap { position:relative; width:440px; height:440px; cursor:pointer; user-select:none; flex-shrink:0; }
+#wheel-canvas { display:block; border-radius:50%; box-shadow:0 8px 40px rgba(0,0,0,.13),0 2px 8px rgba(0,0,0,.08); transition:transform .08s; }
+#wheel-wrap:hover #wheel-canvas { transform:scale(1.012); }
+#wheel-wrap:active #wheel-canvas { transform:scale(0.985); }
+#needle-wrap { position:absolute; right:-6px; top:50%; transform:translateY(-50%); }
+.needle-svg { filter:drop-shadow(0 2px 5px rgba(0,0,0,.3)); }
+.hint { font-size:12px; color:var(--text3); font-weight:600; }
+#result-area { text-align:center; min-height:70px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+#result-name { font-size:28px; font-weight:800; color:var(--text); transition:all .3s; }
+#result-task { font-size:13px; font-weight:600; color:var(--text2); }
+#confirm-btn { display:none; width:100%; max-width:360px; padding:13px; font-family:'Nunito',sans-serif; font-size:15px; font-weight:700; cursor:pointer; background:var(--success); color:white; border:none; border-radius:var(--radius-sm); transition:opacity .15s,transform .1s; }
+#confirm-btn:hover { opacity:.9; }
+#confirm-btn:active { transform:scale(0.98); }
+#status-msg { font-size:12px; font-weight:600; color:var(--text2); min-height:18px; text-align:center; }
+
+#right-col { display:flex; flex-direction:column; gap:16px; }
+.section-title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--text2); margin-bottom:12px; }
+.assign-list { display:flex; flex-direction:column; gap:7px; }
+.assign-row { display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--surface2); border-radius:var(--radius-sm); border:1px solid var(--border); animation:fadeIn .35s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+.assign-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.assign-info { flex:1; min-width:0; }
+.assign-student { font-size:14px; font-weight:700; color:var(--text); }
+.assign-task { font-size:11px; font-weight:600; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.empty-msg { font-size:13px; color:var(--text3); font-weight:600; text-align:center; padding:20px 0; }
+.progress-list { display:flex; flex-direction:column; gap:7px; }
+.prog-row { display:flex; align-items:center; gap:10px; }
+.prog-name { font-size:12px; font-weight:700; color:var(--text); width:72px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.prog-bar-bg { flex:1; height:7px; background:var(--surface2); border-radius:4px; overflow:hidden; border:1px solid var(--border); }
+.prog-bar { height:7px; border-radius:4px; transition:width .6s ease; }
+.prog-pct { font-size:10px; font-weight:700; color:var(--text2); width:30px; text-align:right; }
+#reset-area { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+#reset-btn { width:100%; padding:8px; font-family:'Nunito',sans-serif; font-size:12px; font-weight:700; cursor:pointer; background:transparent; color:var(--text3); border:1px solid var(--border); border-radius:var(--radius-sm); transition:all .15s; }
+#reset-btn:hover { color:var(--danger); border-color:var(--danger); }
+
+/* HISTORIQUE */
+#history-panel { display:flex; flex-direction:column; gap:16px; }
+.history-controls { display:flex; align-items:center; gap:12px; }
+#history-select { font-family:'Nunito',sans-serif; font-size:14px; font-weight:600; padding:8px 14px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; outline:none; }
+#refresh-btn { padding:8px 16px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; background:var(--accent-bg); color:var(--accent); border:1px solid rgba(74,127,229,.25); border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; }
+#refresh-btn:hover { opacity:.85; }
+#history-table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; padding:10px 14px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text2); border-bottom:2px solid var(--border); }
+td { padding:10px 14px; border-bottom:1px solid var(--border); color:var(--text); font-weight:600; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--surface2); }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+
+/* MODAL */
+#modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
+#modal-overlay.open { display:flex; }
+#modal { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); width:680px; max-width:calc(100vw - 40px); max-height:calc(100vh - 60px); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+#modal-header { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+#modal-header h2 { font-size:16px; font-weight:800; flex:1; }
+#modal-close { background:var(--surface2); border:1px solid var(--border); border-radius:8px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; color:var(--text2); transition:all .15s; }
+#modal-close:hover { background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
+.modal-tabs { display:flex; gap:4px; padding:12px 24px 0; border-bottom:1px solid var(--border); }
+.tab-btn { padding:8px 18px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; border:none; background:none; cursor:pointer; color:var(--text2); border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-bottom:2px solid transparent; transition:all .15s; }
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); background:var(--accent-bg); }
+.tab-btn:hover:not(.active) { background:var(--surface2); }
+#modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.tag-list { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; min-height:40px; }
+.tag { display:flex; align-items:center; gap:6px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:13px; font-weight:600; color:var(--text); animation:fadeIn .2s ease; }
+.tag-del { background:none; border:none; cursor:pointer; color:var(--text3); font-size:15px; line-height:1; padding:0 0 0 2px; transition:color .1s; }
+.tag-del:hover { color:var(--danger); }
+.add-row { display:flex; gap:8px; margin-top:4px; }
+.add-input { flex:1; font-family:'Nunito',sans-serif; font-size:14px; font-weight:600; padding:9px 14px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--surface2); color:var(--text); outline:none; transition:border-color .2s; }
+.add-input:focus { border-color:var(--accent); }
+.add-btn { padding:9px 18px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; background:var(--accent); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; transition:opacity .15s; }
+.add-btn:hover { opacity:.88; }
+.section-sep { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text2); margin:16px 0 10px; }
+.danger-zone { margin-top:12px; padding:16px; background:var(--danger-bg); border:1px solid rgba(226,75,74,.2); border-radius:var(--radius-sm); }
+.danger-zone p { font-size:13px; color:var(--text2); margin-bottom:10px; font-weight:600; line-height:1.5; }
+.danger-btn { padding:8px 16px; font-family:'Nunito',sans-serif; font-size:12px; font-weight:700; background:var(--danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; transition:opacity .15s; }
+.danger-btn:hover { opacity:.88; }
+#modal-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+.footer-btn { padding:9px 20px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; }
+.footer-btn.cancel { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.footer-btn.save { background:var(--accent); color:white; border:none; }
+.footer-btn.save:hover { opacity:.88; }
+
+.spinner { display:inline-block; width:12px; height:12px; border:2px solid #ddd; border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; margin-right:5px; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+#sync-indicator { font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; }
+#sync-indicator.syncing { background:#FFF8E1; color:#F59E0B; }
+#sync-indicator.synced { background:var(--success-bg); color:var(--success); }
+#sync-indicator.error { background:var(--danger-bg); color:var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎡</div>
+  <h1>Roue des tâches</h1>
+  <span style="font-size:13px;color:var(--text2);margin-left:4px;">CPJA — Maturité 4</span>
+  <div class="week-pill" id="week-pill">…</div>
+  <div class="header-right">
+    <span id="sync-indicator" style="display:none;"></span>
+    <button id="auth-btn">🔑 Se connecter</button>
+    <button id="settings-btn">⚙️ Paramètres</button>
+  </div>
+</header>
+
+<div class="main-tabs">
+  <button class="main-tab active" data-panel="panel-roue">🎡 Roue</button>
+  <button class="main-tab" data-panel="panel-history">📊 Historique</button>
+</div>
+
+<main>
+  <!-- ROUE -->
+  <div class="main-panel active" id="panel-roue">
+    <div id="roue-layout">
+      <div class="card" id="wheel-panel">
+        <div id="task-row">
+          <label for="task-select">Tâche</label>
+          <select id="task-select"></select>
+          <span id="eligible-badge">…</span>
+        </div>
+        <div id="wheel-wrap" title="Cliquer pour faire tourner">
+          <canvas id="wheel-canvas" width="440" height="440"></canvas>
+          <div id="needle-wrap">
+            <svg class="needle-svg" width="44" height="28" viewBox="0 0 44 28">
+              <polygon points="44,14 0,0 8,14 0,28" fill="#E24B4A"/>
+              <circle cx="8" cy="14" r="5" fill="#fff" stroke="#E24B4A" stroke-width="1.5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="hint">👆 Clique sur la roue pour faire tourner</div>
+        <div id="result-area">
+          <span id="result-name" style="color:var(--text3);font-size:16px;font-weight:700;">Sélectionne une tâche</span>
+          <span id="result-task"></span>
+        </div>
+        <button id="confirm-btn">✓ Confirmer l'attribution</button>
+        <div id="status-msg"></div>
+      </div>
+
+      <div id="right-col">
+        <div class="card" style="flex:1;">
+          <div class="section-title" id="week-title">Cette semaine</div>
+          <div class="assign-list" id="assign-list">
+            <div class="empty-msg">Aucune attribution encore</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Progression des élèves</div>
+          <div class="progress-list" id="progress-list"></div>
+          <div id="reset-area">
+            <button id="reset-btn">↺ Réinitialiser la semaine</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div class="main-panel" id="panel-history">
+    <div class="card" id="history-panel">
+      <div class="history-controls">
+        <div class="section-title" style="margin:0;">Historique des attributions</div>
+        <select id="history-select">
+          <option value="all">Toutes les semaines</option>
+        </select>
+        <button id="refresh-btn">↻ Rafraîchir</button>
+      </div>
+      <div id="history-table-wrap" style="margin-top:16px;">
+        <div class="empty-msg">Connecte-toi pour voir l'historique depuis Google Sheets</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL PARAMÈTRES -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div id="modal-header">
+      <h2>⚙️ Paramètres</h2>
+      <button id="modal-close">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="tab-btn active" data-tab="tab-students">👦 Élèves</button>
+      <button class="tab-btn" data-tab="tab-tasks">📋 Tâches</button>
+      <button class="tab-btn" data-tab="tab-danger">🗑️ Réinitialisation</button>
+    </div>
+    <div id="modal-body">
+      <div class="tab-panel active" id="tab-students">
+        <div class="section-sep">Élèves actifs</div>
+        <div class="tag-list" id="students-tags"></div>
+        <div class="add-row">
+          <input class="add-input" id="new-student-input" type="text" placeholder="Prénom de l'élève…" maxlength="30">
+          <button class="add-btn" id="add-student-btn">+ Ajouter</button>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-tasks">
+        <div class="section-sep">Tâches disponibles</div>
+        <div class="tag-list" id="tasks-tags"></div>
+        <div class="add-row">
+          <input class="add-input" id="new-task-input" type="text" placeholder="Nom de la tâche…" maxlength="50">
+          <button class="add-btn" id="add-task-btn">+ Ajouter</button>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-danger">
+        <div class="danger-zone">
+          <p>⚠️ <strong>Effacer la semaine en cours</strong> — Supprime uniquement les attributions de cette semaine.</p>
+          <button class="danger-btn" id="reset-week-btn">Effacer la semaine en cours</button>
+        </div>
+        <div class="danger-zone" style="margin-top:12px;">
+          <p>⚠️ <strong>Nouvelle année scolaire</strong> — Remet à zéro l'historique des tâches. Les élèves et tâches sont conservés.</p>
+          <button class="danger-btn" id="reset-year-btn">Nouvelle année scolaire</button>
+        </div>
+        <div class="danger-zone" style="margin-top:12px;">
+          <p>⚠️ <strong>Réinitialisation complète</strong> — Remet tout à l'état d'origine. Irréversible.</p>
+          <button class="danger-btn" id="reset-all-btn">Tout réinitialiser</button>
+        </div>
+      </div>
+    </div>
+    <div id="modal-footer">
+      <button class="footer-btn cancel" id="modal-cancel">Annuler</button>
+      <button class="footer-btn save" id="modal-save">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const CLIENT_ID = '1059168724219-4u5na2706v0dt6phbbhm2rn03pskmdr1.apps.googleusercontent.com';
+const SPREADSHEET_ID = '18ntruGddnEtiz-ibidzQTY1lAwMPQID0tEzIq-63EIw';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+const SHEET_DATA = 'Configuration';
+const SHEET_HISTORY = 'Historique';
+
+// ── DEFAULTS
+const DEFAULT_TASKS = ['Messager','Distributeur','Chef de rang (1)','Chef de rang (2)','Ramasseur','Responsable de la date','Responsable des boites à tartine (1)','Responsable des boites à tartines 2','Responsable des casiers','Responsable des livres','Remplaçant'];
+const DEFAULT_STUDENTS = [{name:'Hasan',done:['Messager']},{name:'Ahmed K.',done:['Responsable des boites à tartine (1)']},{name:'Hussein',done:['Remplaçant']},{name:'Ayman',done:['Chef de rang (2)']},{name:'Jordan',done:['Chef de rang (1)']},{name:'Daniel',done:['Responsable des casiers']},{name:'Ouwais',done:[]},{name:'Meryem',done:['Distributeur']},{name:'Ahmed A.',done:['Ramasseur']},{name:'Louay',done:['Responsable des boites à tartines 2']},{name:'Oumar',done:['Responsable des boites à tartine (1)']},{name:'Mamadou',done:['Responsable des livres']},{name:'Rayan',done:['Ramasseur']}];
+const COLORS = ['#4A7FE5','#E07B54','#3DBB7C','#C97EC4','#E8C44A','#5AB8D4','#D4856A','#66BB66','#9A7FD4','#E89B4A','#45C4B0','#D4709A','#8BBB55'];
+const STORE_KEY = 'cpja_roue_v3';
+
+// ── STATE
+function loadState() {
+  try { const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r); } catch(e){}
+  return { students:JSON.parse(JSON.stringify(DEFAULT_STUDENTS)), tasks:[...DEFAULT_TASKS], weekAssignments:[] };
+}
+function saveState() {
+  try { localStorage.setItem(STORE_KEY,JSON.stringify({students,tasks,weekAssignments})); } catch(e){}
+}
+
+let {students,tasks,weekAssignments} = loadState();
+let spinning=false, lastWinner=null, currentAngle=0, eligible=[], selectedTask=tasks[0]||'';
+let tempStudents=[], tempTasks=[];
+let accessToken = null;
+
+// ── WEEK
+function getWeekKey() {
+  const now=new Date(), d=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()));
+  d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
+  const y=d.getUTCFullYear(), ys=new Date(Date.UTC(y,0,1));
+  const w=Math.ceil((((d-ys)/86400000)+1)/7);
+  return {key:`S${w}-${y}`, label:`Semaine ${w} — ${y}`};
+}
+
+// ── ELIGIBLE
+function getEligible(task) {
+  const wk = getWeekKey().key;
+  const assignedThisWeek = new Set(weekAssignments.filter(a=>a.week===wk).map(a=>a.student));
+  const doneThisTask = new Set(students.filter(s=>s.done.includes(task)).map(s=>s.name));
+  const p1 = students.filter(s=>!assignedThisWeek.has(s.name)&&!doneThisTask.has(s.name));
+  if(p1.length>0) return p1;
+  const p2 = students.filter(s=>!assignedThisWeek.has(s.name));
+  if(p2.length>0) return p2;
+  const p3 = students.filter(s=>!doneThisTask.has(s.name));
+  if(p3.length>0) return p3;
+  return [...students];
+}
+
+// ── WHEEL
+const canvas=document.getElementById('wheel-canvas'), ctx=canvas.getContext('2d');
+function drawWheel(list,angle) {
+  const W=440,cx=W/2,cy=W/2,R=214,Rin=24;
+  ctx.clearRect(0,0,W,W);
+  if(!list.length){
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='#eee';ctx.fill();
+    ctx.fillStyle='#aaa';ctx.font='700 15px Nunito,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Aucun élève éligible',cx,cy+5);return;
+  }
+  const n=list.length,arc=(2*Math.PI)/n;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+  list.forEach((s,i)=>{
+    const start=i*arc,end=start+arc;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,R,start,end);ctx.closePath();
+    ctx.fillStyle=COLORS[i%COLORS.length];ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.save();ctx.rotate(start+arc/2);
+    const fs=Math.max(11,Math.min(18,210/n));
+    ctx.font=`700 ${fs}px Nunito,sans-serif`;
+    ctx.fillStyle='rgba(255,255,255,.97)';ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=3;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(s.name,R*0.62,0);ctx.restore();
+  });
+  ctx.restore();
+  const hub=ctx.createRadialGradient(cx-6,cy-6,3,cx,cy,Rin+6);
+  hub.addColorStop(0,'#fff');hub.addColorStop(1,'#d0d4e0');
+  ctx.beginPath();ctx.arc(cx,cy,Rin,0,Math.PI*2);ctx.fillStyle=hub;ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.1)';ctx.lineWidth=1.5;ctx.stroke();
+}
+function getWinner(list,angle){
+  if(!list.length)return null;
+  const n=list.length,arc=(2*Math.PI)/n;
+  const norm=((-angle)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+  return list[Math.floor(norm/arc)%n];
+}
+
+function spin(){
+  if(!eligible.length||spinning)return;
+  spinning=true;lastWinner=null;
+  document.getElementById('confirm-btn').style.display='none';
+  const rn=document.getElementById('result-name');
+  rn.textContent='…';rn.style.color='var(--text2)';rn.style.fontSize='22px';
+  document.getElementById('result-task').textContent='';
+  const n=eligible.length,arc=(2*Math.PI)/n;
+  const ti=Math.floor(Math.random()*n);
+  const extra=6+Math.floor(Math.random()*5);
+  const target=currentAngle+2*Math.PI*extra+((2*Math.PI-(currentAngle%(2*Math.PI)))+2*Math.PI-ti*arc-arc/2);
+  const dur=4000+Math.random()*600,sa=currentAngle,t0=performance.now();
+  function ease(t){return 1-Math.pow(1-t,4.5);}
+  function frame(now){
+    const t=Math.min((now-t0)/dur,1);
+    currentAngle=sa+(target-sa)*ease(t);
+    drawWheel(eligible,currentAngle);
+    if(t<1){requestAnimationFrame(frame);return;}
+    spinning=false;
+    const w=getWinner(eligible,currentAngle);lastWinner=w;
+    rn.textContent=w?w.name:'?';rn.style.color='var(--text)';rn.style.fontSize='28px';
+    document.getElementById('result-task').textContent=`→ ${selectedTask}`;
+    document.getElementById('confirm-btn').style.display='block';
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── TASK SELECT
+function rebuildTaskSelect(){
+  const sel=document.getElementById('task-select');
+  sel.innerHTML='';
+  tasks.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o);});
+  if(tasks.includes(selectedTask))sel.value=selectedTask;
+  else selectedTask=tasks[0]||'';
+}
+function onTaskChange(){
+  selectedTask=document.getElementById('task-select').value;
+  eligible=getEligible(selectedTask);
+  const n=eligible.length;
+  document.getElementById('eligible-badge').textContent=`${n} éligible${n>1?'s':''}`;
+  drawWheel(eligible,currentAngle);
+  const rn=document.getElementById('result-name');
+  rn.textContent=n?'Prêt !':'Aucun élève disponible';
+  rn.style.color='var(--text3)';rn.style.fontSize='16px';
+  document.getElementById('result-task').textContent='';
+  document.getElementById('confirm-btn').style.display='none';
+  lastWinner=null;
+}
+
+// ── CONFIRM
+async function confirmAttribution(){
+  if(!lastWinner||!selectedTask)return;
+  const wk=getWeekKey().key;
+  const ci=eligible.indexOf(lastWinner);
+  const entry={task:selectedTask,student:lastWinner.name,week:wk,color:COLORS[ci%COLORS.length],date:new Date().toLocaleDateString('fr-BE')};
+  weekAssignments.push(entry);
+  if(!lastWinner.done.includes(selectedTask))lastWinner.done.push(selectedTask);
+  saveState();
+  document.getElementById('confirm-btn').style.display='none';
+  onTaskChange();renderWeek();renderProgress();
+
+  if(accessToken){
+    setSyncStatus('syncing','⏳ Enregistrement…');
+    try {
+      await appendToHistory(entry);
+      await saveConfigToSheets();
+      setSyncStatus('synced','✓ Synchronisé');
+      document.getElementById('status-msg').textContent='✓ Enregistré dans Google Sheets !';
+    } catch(e){
+      setSyncStatus('error','⚠ Erreur Sheets');
+      document.getElementById('status-msg').textContent='✓ Enregistré localement (erreur Sheets)';
+    }
+  } else {
+    document.getElementById('status-msg').textContent='✓ Enregistré localement (connecte-toi pour sync)';
+  }
+  setTimeout(()=>{document.getElementById('status-msg').textContent='';},3000);
+}
+
+// ── RENDER
+function renderWeek(){
+  const {key,label}=getWeekKey();
+  document.getElementById('week-pill').textContent=label;
+  document.getElementById('week-title').textContent='Attributions — '+label;
+  const thisWeek=weekAssignments.filter(a=>a.week===key);
+  const list=document.getElementById('assign-list');
+  if(!thisWeek.length){list.innerHTML='<div class="empty-msg">Aucune attribution encore</div>';return;}
+  list.innerHTML=thisWeek.slice().reverse().map(a=>
+    `<div class="assign-row"><div class="assign-dot" style="background:${a.color||'#4A7FE5'}"></div><div class="assign-info"><div class="assign-student">${a.student}</div><div class="assign-task">${a.task}</div></div></div>`
+  ).join('');
+}
+function renderProgress(){
+  const total=tasks.length||1;
+  document.getElementById('progress-list').innerHTML=students.map(s=>{
+    const pct=Math.round((s.done.length/total)*100);
+    const c=pct>=80?'#3DBB7C':pct>=40?'#4A7FE5':'#E8C44A';
+    return `<div class="prog-row"><div class="prog-name" title="${s.name}">${s.name}</div><div class="prog-bar-bg"><div class="prog-bar" style="width:${pct}%;background:${c};"></div></div><div class="prog-pct">${pct}%</div></div>`;
+  }).join('');
+}
+
+// ── GOOGLE SHEETS API
+function setSyncStatus(state,text){
+  const el=document.getElementById('sync-indicator');
+  el.style.display='block';
+  el.className='';
+  el.id='sync-indicator';
+  el.classList.add(state);
+  el.textContent=text;
+  if(state==='synced') setTimeout(()=>{el.style.display='none';},3000);
+}
+
+async function sheetsRequest(method,path,body=null){
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}${path}`;
+  const opts={method,headers:{'Authorization':`Bearer ${accessToken}`,'Content-Type':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function ensureSheets(){
+  const data=await sheetsRequest('GET','');
+  const names=data.sheets.map(s=>s.properties.title);
+  const toCreate=[];
+  if(!names.includes(SHEET_HISTORY)) toCreate.push({addSheet:{properties:{title:SHEET_HISTORY}}});
+  if(!names.includes(SHEET_DATA)) toCreate.push({addSheet:{properties:{title:SHEET_DATA}}});
+  if(toCreate.length){
+    await sheetsRequest('POST',':batchUpdate',{requests:toCreate});
+  }
+  // Headers historique
+  const hist=await sheetsRequest('GET',`/values/${SHEET_HISTORY}!A1:E1`);
+  if(!hist.values || !hist.values.length){
+    await sheetsRequest('PUT',`/values/${SHEET_HISTORY}!A1:E1?valueInputOption=RAW`,{values:[['Semaine','Date','Tâche','Élève','Couleur']]});
+  }
+}
+
+async function appendToHistory(entry){
+  await ensureSheets();
+  await sheetsRequest('POST',`/values/${SHEET_HISTORY}!A:E:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{
+    values:[[entry.week,entry.date||'',entry.task,entry.student,entry.color||'']]
+  });
+}
+
+async function saveConfigToSheets(){
+  await ensureSheets();
+  // Sauvegarde élèves + tâches dans feuille Configuration
+  const rows=[['Élève','Tâches effectuées'],...students.map(s=>[s.name,s.done.join(';')]),['---','---'],['TACHES',''],  ...tasks.map(t=>[t,''])];
+  await sheetsRequest('PUT',`/values/${SHEET_DATA}!A1:B${rows.length+1}?valueInputOption=RAW`,{values:rows});
+}
+
+async function loadFromSheets(){
+  try {
+    setSyncStatus('syncing','⏳ Chargement…');
+    await ensureSheets();
+
+    // Charger config
+    const cfg=await sheetsRequest('GET',`/values/${SHEET_DATA}!A:B`);
+    if(cfg.values && cfg.values.length>1){
+      const newStudents=[], newTasks=[];
+      let mode='students';
+      for(let i=1;i<cfg.values.length;i++){
+        const [a,b]=cfg.values[i];
+        if(a==='---'){mode='tasks';continue;}
+        if(a==='TACHES'){mode='tasks';continue;}
+        if(mode==='students' && a) newStudents.push({name:a,done:b?b.split(';').filter(Boolean):[]});
+        if(mode==='tasks' && a) newTasks.push(a);
+      }
+      if(newStudents.length) students=newStudents;
+      if(newTasks.length) tasks=newTasks;
+      saveState();
+      rebuildTaskSelect();onTaskChange();renderProgress();
+    }
+
+    // Charger historique semaine courante
+    const wk=getWeekKey().key;
+    const hist=await sheetsRequest('GET',`/values/${SHEET_HISTORY}!A:E`);
+    if(hist.values && hist.values.length>1){
+      weekAssignments=hist.values.slice(1)
+        .filter(r=>r[0]===wk)
+        .map(r=>({week:r[0],date:r[1],task:r[2],student:r[3],color:r[4]||'#4A7FE5'}));
+      saveState();renderWeek();onTaskChange();
+    }
+
+    setSyncStatus('synced','✓ Synchronisé');
+  } catch(e){
+    setSyncStatus('error','⚠ Erreur chargement');
+    console.error(e);
+  }
+}
+
+async function loadHistory(){
+  if(!accessToken){
+    document.getElementById('history-table-wrap').innerHTML='<div class="empty-msg">Connecte-toi avec Google pour voir l\'historique</div>';
+    return;
+  }
+  document.getElementById('history-table-wrap').innerHTML='<div class="empty-msg"><span class="spinner"></span>Chargement…</div>';
+  try {
+    const hist=await sheetsRequest('GET',`/values/${SHEET_HISTORY}!A:E`);
+    if(!hist.values||hist.values.length<=1){
+      document.getElementById('history-table-wrap').innerHTML='<div class="empty-msg">Aucun historique encore</div>';
+      return;
+    }
+    const rows=hist.values.slice(1);
+
+    // Populate week select
+    const weeks=[...new Set(rows.map(r=>r[0]).filter(Boolean))].sort().reverse();
+    const sel=document.getElementById('history-select');
+    sel.innerHTML='<option value="all">Toutes les semaines</option>'+weeks.map(w=>`<option value="${w}">${w}</option>`).join('');
+
+    renderHistoryTable(rows, sel.value);
+
+    sel.onchange=()=>renderHistoryTable(rows,sel.value);
+  } catch(e){
+    document.getElementById('history-table-wrap').innerHTML='<div class="empty-msg">Erreur de chargement</div>';
+  }
+}
+
+function renderHistoryTable(rows,filter){
+  const filtered=filter==='all'?rows:rows.filter(r=>r[0]===filter);
+  if(!filtered.length){
+    document.getElementById('history-table-wrap').innerHTML='<div class="empty-msg">Aucune donnée pour cette semaine</div>';
+    return;
+  }
+  document.getElementById('history-table-wrap').innerHTML=`
+    <table>
+      <thead><tr><th>Semaine</th><th>Date</th><th>Élève</th><th>Tâche</th></tr></thead>
+      <tbody>${filtered.map(r=>`
+        <tr>
+          <td><span class="badge" style="background:var(--accent-bg);color:var(--accent);">${r[0]||''}</span></td>
+          <td>${r[1]||''}</td>
+          <td><strong>${r[3]||''}</strong></td>
+          <td>${r[2]||''}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ── GOOGLE AUTH
+function initGoogleAuth(){
+  if(!window.google) { setTimeout(initGoogleAuth,500); return; }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if(resp.access_token){
+        accessToken=resp.access_token;
+        const btn=document.getElementById('auth-btn');
+        btn.textContent='✓ Connecté';
+        btn.classList.add('connected');
+        loadFromSheets();
+      }
+    }
+  });
+  document.getElementById('auth-btn').addEventListener('click',()=>{
+    if(accessToken){
+      accessToken=null;
+      const btn=document.getElementById('auth-btn');
+      btn.textContent='🔑 Se connecter';
+      btn.classList.remove('connected');
+    } else {
+      client.requestAccessToken();
+    }
+  });
+}
+
+// ── MODAL
+function openModal(){
+  tempStudents=students.map(s=>({...s,done:[...s.done]}));
+  tempTasks=[...tasks];
+  renderModalStudents();renderModalTasks();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function saveModal(){
+  students=tempStudents.map(s=>({...s,done:[...s.done]}));
+  tasks=[...tempTasks];selectedTask=tasks[0]||'';
+  saveState();rebuildTaskSelect();onTaskChange();renderProgress();
+  if(accessToken) saveConfigToSheets().catch(console.error);
+  closeModal();
+}
+function renderModalStudents(){
+  document.getElementById('students-tags').innerHTML=tempStudents.map((s,i)=>
+    `<div class="tag">${s.name}<button class="tag-del" data-type="student" data-idx="${i}">×</button></div>`
+  ).join('');
+}
+function renderModalTasks(){
+  document.getElementById('tasks-tags').innerHTML=tempTasks.map((t,i)=>
+    `<div class="tag">${t}<button class="tag-del" data-type="task" data-idx="${i}">×</button></div>`
+  ).join('');
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+document.getElementById('modal-body').addEventListener('click',e=>{
+  const btn=e.target.closest('.tag-del');if(!btn)return;
+  const idx=parseInt(btn.dataset.idx);
+  if(btn.dataset.type==='student'){tempStudents.splice(idx,1);renderModalStudents();}
+  else{tempTasks.splice(idx,1);renderModalTasks();}
+});
+function addStudent(){
+  const input=document.getElementById('new-student-input');
+  const name=input.value.trim();if(!name)return;
+  if(tempStudents.some(s=>s.name.toLowerCase()===name.toLowerCase())){input.style.borderColor='var(--danger)';setTimeout(()=>{input.style.borderColor='';},1500);return;}
+  tempStudents.push({name,done:[]});renderModalStudents();input.value='';input.focus();
+}
+function addTask(){
+  const input=document.getElementById('new-task-input');
+  const name=input.value.trim();if(!name)return;
+  if(tempTasks.some(t=>t.toLowerCase()===name.toLowerCase())){input.style.borderColor='var(--danger)';setTimeout(()=>{input.style.borderColor='';},1500);return;}
+  tempTasks.push(name);renderModalTasks();input.value='';input.focus();
+}
+document.getElementById('add-student-btn').addEventListener('click',addStudent);
+document.getElementById('new-student-input').addEventListener('keydown',e=>{if(e.key==='Enter')addStudent();});
+document.getElementById('add-task-btn').addEventListener('click',addTask);
+document.getElementById('new-task-input').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
+
+document.getElementById('reset-week-btn').addEventListener('click',()=>{
+  if(!confirm('Effacer les attributions de cette semaine ?'))return;
+  const wk=getWeekKey().key;weekAssignments=weekAssignments.filter(a=>a.week!==wk);
+  saveState();renderWeek();onTaskChange();closeModal();
+});
+document.getElementById('reset-year-btn').addEventListener('click',()=>{
+  if(!confirm('Nouvelle année scolaire ?'))return;
+  students=students.map(s=>({...s,done:[]}));weekAssignments=[];
+  saveState();onTaskChange();renderWeek();renderProgress();
+  if(accessToken) saveConfigToSheets().catch(console.error);
+  closeModal();
+});
+document.getElementById('reset-all-btn').addEventListener('click',()=>{
+  if(!confirm('Réinitialisation complète ?'))return;
+  students=JSON.parse(JSON.stringify(DEFAULT_STUDENTS));tasks=[...DEFAULT_TASKS];weekAssignments=[];
+  selectedTask=tasks[0];saveState();rebuildTaskSelect();onTaskChange();renderWeek();renderProgress();closeModal();
+});
+
+document.getElementById('settings-btn').addEventListener('click',openModal);
+document.getElementById('modal-close').addEventListener('click',closeModal);
+document.getElementById('modal-cancel').addEventListener('click',closeModal);
+document.getElementById('modal-save').addEventListener('click',saveModal);
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('modal-overlay'))closeModal();});
+document.getElementById('reset-btn').addEventListener('click',()=>{
+  if(!confirm('Réinitialiser les attributions de cette semaine ?'))return;
+  const wk=getWeekKey().key;weekAssignments=weekAssignments.filter(a=>a.week!==wk);
+  saveState();renderWeek();onTaskChange();
+});
+
+// ── MAIN TABS
+document.querySelectorAll('.main-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.main-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.panel).classList.add('active');
+    if(btn.dataset.panel==='panel-history') loadHistory();
+  });
+});
+
+document.getElementById('refresh-btn').addEventListener('click',loadHistory);
+document.getElementById('wheel-wrap').addEventListener('click',spin);
+document.getElementById('task-select').addEventListener('change',onTaskChange);
+document.getElementById('confirm-btn').addEventListener('click',confirmAttribution);
+
+// ── INIT
+initGoogleAuth();
+rebuildTaskSelect();onTaskChange();renderWeek();renderProgress();
+</script>
+</body>
+</html>
