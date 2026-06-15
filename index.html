@@ -352,7 +352,36 @@ function getWinner(list,angle){
 }
 
 function spin(){
+// ── AUDIO
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playClick() {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.frequency.setValueAtTime(600, audioCtx.currentTime);
+  g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+  o.start(); o.stop(audioCtx.currentTime + 0.04);
+}
+
+function playDing() {
+  [523, 659, 784, 1047].forEach((freq, i) => {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.12);
+    g.gain.setValueAtTime(0.3, audioCtx.currentTime + i * 0.12);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.12 + 0.6);
+    o.start(audioCtx.currentTime + i * 0.12);
+    o.stop(audioCtx.currentTime + i * 0.12 + 0.6);
+  });
+}
+
+function spin(){
   if(!eligible.length||spinning)return;
+  if(audioCtx.state === 'suspended') audioCtx.resume();
   spinning=true;lastWinner=null;
   document.getElementById('confirm-btn').style.display='none';
   const rn=document.getElementById('result-name');
@@ -363,10 +392,17 @@ function spin(){
   const extra=6+Math.floor(Math.random()*5);
   const target=currentAngle+2*Math.PI*extra+((2*Math.PI-(currentAngle%(2*Math.PI)))+2*Math.PI-ti*arc-arc/2);
   const dur=4000+Math.random()*600,sa=currentAngle,t0=performance.now();
+  let lastClickAngle = currentAngle;
+  const clickInterval = arc * 0.8;
   function ease(t){return 1-Math.pow(1-t,4.5);}
   function frame(now){
     const t=Math.min((now-t0)/dur,1);
     currentAngle=sa+(target-sa)*ease(t);
+    // cliquet
+    if(Math.abs(currentAngle - lastClickAngle) >= clickInterval){
+      playClick();
+      lastClickAngle = currentAngle;
+    }
     drawWheel(eligible,currentAngle);
     if(t<1){requestAnimationFrame(frame);return;}
     spinning=false;
@@ -374,6 +410,7 @@ function spin(){
     rn.textContent=w?w.name:'?';rn.style.color='var(--text)';rn.style.fontSize='28px';
     document.getElementById('result-task').textContent=`→ ${selectedTask}`;
     document.getElementById('confirm-btn').style.display='block';
+    playDing();
   }
   requestAnimationFrame(frame);
 }
