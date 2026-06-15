@@ -702,7 +702,7 @@ document.querySelectorAll('.main-tab').forEach(btn=>{
   });
 });
 
-document.getElementById('refresh-btn').addEventListener('click',loadHistory);
+document.getElementById('refresh-btn').addEventListener('click',()=>{ loadFromSheets(); loadHistory(); });
 document.getElementById('wheel-wrap').addEventListener('click',spin);
 document.getElementById('task-select').addEventListener('change',onTaskChange);
 document.getElementById('confirm-btn').addEventListener('click',confirmAttribution);
