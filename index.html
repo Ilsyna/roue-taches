@@ -455,10 +455,14 @@ function renderWeek(){
   ).join('');
 }
 function renderProgress(){
-  const total=tasks.length||1;
-  document.getElementById('progress-list').innerHTML=students.map(s=>{
-    const pct=Math.round((s.done.length/total)*100);
-    const c=pct>=80?'#3DBB7C':pct>=40?'#4A7FE5':'#E8C44A';
+  const total = tasks.length || 1;
+  document.getElementById('progress-list').innerHTML = students.map(s => {
+    // Compter les tâches uniques faites par cet élève dans tout l'historique
+    const doneTasks = new Set(
+      weekAssignments.filter(a => a.student === s.name).map(a => a.task)
+    );
+    const pct = Math.round((doneTasks.size / total) * 100);
+    const c = pct >= 80 ? '#3DBB7C' : pct >= 40 ? '#4A7FE5' : '#E8C44A';
     return `<div class="prog-row"><div class="prog-name" title="${s.name}">${s.name}</div><div class="prog-bar-bg"><div class="prog-bar" style="width:${pct}%;background:${c};"></div></div><div class="prog-pct">${pct}%</div></div>`;
   }).join('');
 }
