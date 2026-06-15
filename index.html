@@ -30,7 +30,6 @@ header h1 { font-size:18px; font-weight:800; }
 #settings-btn { background:var(--surface2); color:var(--text2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 14px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:all .15s; }
 #settings-btn:hover { background:var(--accent-bg); color:var(--accent); border-color:var(--accent); }
 
-/* TABS MAIN */
 .main-tabs { display:flex; gap:4px; padding:16px 32px 0; max-width:1200px; margin:0 auto; width:100%; }
 .main-tab { padding:9px 20px; font-family:'Nunito',sans-serif; font-size:13px; font-weight:700; border:none; background:none; cursor:pointer; color:var(--text2); border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-bottom:2px solid transparent; transition:all .15s; }
 .main-tab.active { color:var(--accent); border-bottom-color:var(--accent); background:var(--surface); }
@@ -42,7 +41,6 @@ main { flex:1; max-width:1200px; margin:0 auto; width:100%; padding:0 32px 32px;
 
 .card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:24px; }
 
-/* ROUE */
 #roue-layout { display:grid; grid-template-columns:1fr 340px; gap:20px; }
 #wheel-panel { display:flex; flex-direction:column; align-items:center; gap:20px; }
 #task-row { width:100%; display:flex; align-items:center; gap:10px; }
@@ -85,7 +83,6 @@ main { flex:1; max-width:1200px; margin:0 auto; width:100%; padding:0 32px 32px;
 #reset-btn { width:100%; padding:8px; font-family:'Nunito',sans-serif; font-size:12px; font-weight:700; cursor:pointer; background:transparent; color:var(--text3); border:1px solid var(--border); border-radius:var(--radius-sm); transition:all .15s; }
 #reset-btn:hover { color:var(--danger); border-color:var(--danger); }
 
-/* HISTORIQUE */
 #history-panel { display:flex; flex-direction:column; gap:16px; }
 .history-controls { display:flex; align-items:center; gap:12px; }
 #history-select { font-family:'Nunito',sans-serif; font-size:14px; font-weight:600; padding:8px 14px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; outline:none; }
@@ -99,7 +96,6 @@ tr:last-child td { border-bottom:none; }
 tr:hover td { background:var(--surface2); }
 .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
 
-/* MODAL */
 #modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(3px); }
 #modal-overlay.open { display:flex; }
 #modal { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); width:680px; max-width:calc(100vw - 40px); max-height:calc(100vh - 60px); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.2); }
@@ -163,7 +159,6 @@ tr:hover td { background:var(--surface2); }
 </div>
 
 <main>
-  <!-- ROUE -->
   <div class="main-panel active" id="panel-roue">
     <div id="roue-layout">
       <div class="card" id="wheel-panel">
@@ -208,7 +203,6 @@ tr:hover td { background:var(--surface2); }
     </div>
   </div>
 
-  <!-- HISTORIQUE -->
   <div class="main-panel" id="panel-history">
     <div class="card" id="history-panel">
       <div class="history-controls">
@@ -225,7 +219,6 @@ tr:hover td { background:var(--surface2); }
   </div>
 </main>
 
-<!-- MODAL PARAMÈTRES -->
 <div id="modal-overlay">
   <div id="modal">
     <div id="modal-header">
@@ -277,20 +270,17 @@ tr:hover td { background:var(--surface2); }
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────────────────
 const CLIENT_ID = '1059168724219-4u5na2706v0dt6phbbhm2rn03pskmdr1.apps.googleusercontent.com';
 const SPREADSHEET_ID = '18ntruGddnEtiz-ibidzQTY1lAwMPQID0tEzIq-63EIw';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const SHEET_DATA = 'Configuration';
 const SHEET_HISTORY = 'Historique';
 
-// ── DEFAULTS
 const DEFAULT_TASKS = ['Messager','Distributeur','Chef de rang (1)','Chef de rang (2)','Ramasseur','Responsable de la date','Responsable des boites à tartine (1)','Responsable des boites à tartines 2','Responsable des casiers','Responsable des livres','Remplaçant'];
 const DEFAULT_STUDENTS = [{name:'Hasan',done:['Messager']},{name:'Ahmed K.',done:['Responsable des boites à tartine (1)']},{name:'Hussein',done:['Remplaçant']},{name:'Ayman',done:['Chef de rang (2)']},{name:'Jordan',done:['Chef de rang (1)']},{name:'Daniel',done:['Responsable des casiers']},{name:'Ouwais',done:[]},{name:'Meryem',done:['Distributeur']},{name:'Ahmed A.',done:['Ramasseur']},{name:'Louay',done:['Responsable des boites à tartines 2']},{name:'Oumar',done:['Responsable des boites à tartine (1)']},{name:'Mamadou',done:['Responsable des livres']},{name:'Rayan',done:['Ramasseur']}];
 const COLORS = ['#4A7FE5','#E07B54','#3DBB7C','#C97EC4','#E8C44A','#5AB8D4','#D4856A','#66BB66','#9A7FD4','#E89B4A','#45C4B0','#D4709A','#8BBB55'];
 const STORE_KEY = 'cpja_roue_v3';
 
-// ── STATE
 function loadState() {
   try { const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r); } catch(e){}
   return { students:JSON.parse(JSON.stringify(DEFAULT_STUDENTS)), tasks:[...DEFAULT_TASKS], weekAssignments:[] };
@@ -304,7 +294,6 @@ let spinning=false, lastWinner=null, currentAngle=0, eligible=[], selectedTask=t
 let tempStudents=[], tempTasks=[];
 let accessToken = null;
 
-// ── WEEK
 function getWeekKey() {
   const now=new Date(), d=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()));
   d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
@@ -313,7 +302,6 @@ function getWeekKey() {
   return {key:`S${w}-${y}`, label:`Semaine ${w} — ${y}`};
 }
 
-// ── ELIGIBLE
 function getEligible(task) {
   const wk = getWeekKey().key;
   const assignedThisWeek = new Set(weekAssignments.filter(a=>a.week===wk).map(a=>a.student));
@@ -327,7 +315,6 @@ function getEligible(task) {
   return [...students];
 }
 
-// ── WHEEL
 const canvas=document.getElementById('wheel-canvas'), ctx=canvas.getContext('2d');
 function drawWheel(list,angle) {
   const W=440,cx=W/2,cy=W/2,R=214,Rin=24;
@@ -391,7 +378,6 @@ function spin(){
   requestAnimationFrame(frame);
 }
 
-// ── TASK SELECT
 function rebuildTaskSelect(){
   const sel=document.getElementById('task-select');
   sel.innerHTML='';
@@ -413,7 +399,6 @@ function onTaskChange(){
   lastWinner=null;
 }
 
-// ── CONFIRM
 async function confirmAttribution(){
   if(!lastWinner||!selectedTask)return;
   const wk=getWeekKey().key;
@@ -442,7 +427,6 @@ async function confirmAttribution(){
   setTimeout(()=>{document.getElementById('status-msg').textContent='';},3000);
 }
 
-// ── RENDER
 function renderWeek(){
   const {key,label}=getWeekKey();
   document.getElementById('week-pill').textContent=label;
@@ -454,10 +438,10 @@ function renderWeek(){
     `<div class="assign-row"><div class="assign-dot" style="background:${a.color||'#4A7FE5'}"></div><div class="assign-info"><div class="assign-student">${a.student}</div><div class="assign-task">${a.task}</div></div></div>`
   ).join('');
 }
+
 function renderProgress(){
   const total = tasks.length || 1;
   document.getElementById('progress-list').innerHTML = students.map(s => {
-    // Compter les tâches uniques faites par cet élève dans tout l'historique
     const doneTasks = new Set(
       weekAssignments.filter(a => a.student === s.name).map(a => a.task)
     );
@@ -467,7 +451,6 @@ function renderProgress(){
   }).join('');
 }
 
-// ── GOOGLE SHEETS API
 function setSyncStatus(state,text){
   const el=document.getElementById('sync-indicator');
   el.style.display='block';
@@ -496,7 +479,6 @@ async function ensureSheets(){
   if(toCreate.length){
     await sheetsRequest('POST',':batchUpdate',{requests:toCreate});
   }
-  // Headers historique
   const hist=await sheetsRequest('GET',`/values/${SHEET_HISTORY}!A1:E1`);
   if(!hist.values || !hist.values.length){
     await sheetsRequest('PUT',`/values/${SHEET_HISTORY}!A1:E1?valueInputOption=RAW`,{values:[['Semaine','Date','Tâche','Élève','Couleur']]});
@@ -512,8 +494,7 @@ async function appendToHistory(entry){
 
 async function saveConfigToSheets(){
   await ensureSheets();
-  // Sauvegarde élèves + tâches dans feuille Configuration
-  const rows=[['Élève','Tâches effectuées'],...students.map(s=>[s.name,s.done.join(';')]),['---','---'],['TACHES',''],  ...tasks.map(t=>[t,''])];
+  const rows=[['Élève','Tâches effectuées'],...students.map(s=>[s.name,s.done.join(';')]),['---','---'],['TACHES',''],...tasks.map(t=>[t,''])];
   await sheetsRequest('PUT',`/values/${SHEET_DATA}!A1:B${rows.length+1}?valueInputOption=RAW`,{values:rows});
 }
 
@@ -537,17 +518,16 @@ async function loadFromSheets(){
       if(newStudents.length) students=newStudents;
       if(newTasks.length) tasks=newTasks;
       saveState();
-      rebuildTaskSelect();onTaskChange();renderProgress();
+      rebuildTaskSelect();onTaskChange();
     }
 
-    // Charger historique semaine courante
-    const wk=getWeekKey().key;
+    // ── FIX : charger TOUT l'historique (pas uniquement la semaine courante)
     const hist=await sheetsRequest('GET',`/values/${SHEET_HISTORY}!A:E`);
     if(hist.values && hist.values.length>1){
       weekAssignments=hist.values.slice(1)
-        .filter(r=>r[0]===wk)
+        .filter(r=>r[0])
         .map(r=>({week:r[0],date:r[1],task:r[2],student:r[3],color:r[4]||'#4A7FE5'}));
-      saveState();renderWeek();onTaskChange();
+      saveState();renderWeek();onTaskChange();renderProgress();
     }
 
     setSyncStatus('synced','✓ Synchronisé');
@@ -570,14 +550,10 @@ async function loadHistory(){
       return;
     }
     const rows=hist.values.slice(1);
-
-    // Populate week select
     const weeks=[...new Set(rows.map(r=>r[0]).filter(Boolean))].sort().reverse();
     const sel=document.getElementById('history-select');
     sel.innerHTML='<option value="all">Toutes les semaines</option>'+weeks.map(w=>`<option value="${w}">${w}</option>`).join('');
-
     renderHistoryTable(rows, sel.value);
-
     sel.onchange=()=>renderHistoryTable(rows,sel.value);
   } catch(e){
     document.getElementById('history-table-wrap').innerHTML='<div class="empty-msg">Erreur de chargement</div>';
@@ -604,7 +580,6 @@ function renderHistoryTable(rows,filter){
     </table>`;
 }
 
-// ── GOOGLE AUTH
 function initGoogleAuth(){
   if(!window.google) { setTimeout(initGoogleAuth,500); return; }
   const client = google.accounts.oauth2.initTokenClient({
@@ -632,7 +607,6 @@ function initGoogleAuth(){
   });
 }
 
-// ── MODAL
 function openModal(){
   tempStudents=students.map(s=>({...s,done:[...s.done]}));
   tempTasks=[...tasks];
@@ -718,7 +692,6 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
   saveState();renderWeek();onTaskChange();
 });
 
-// ── MAIN TABS
 document.querySelectorAll('.main-tab').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
@@ -734,7 +707,6 @@ document.getElementById('wheel-wrap').addEventListener('click',spin);
 document.getElementById('task-select').addEventListener('change',onTaskChange);
 document.getElementById('confirm-btn').addEventListener('click',confirmAttribution);
 
-// ── INIT
 initGoogleAuth();
 rebuildTaskSelect();onTaskChange();renderWeek();renderProgress();
 </script>
